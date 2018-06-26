@@ -321,7 +321,7 @@ int adm_dts_eagle_set(int port_id, int copp_idx, int param_id,
 			__func__, admp.hdr.dest_port,
 			admp.payload_size, AUDPROC_MODULE_ID_DTS_HPX_POSTMIX,
 			param_id);
-	atomic_set(&this_adm.copp.stat[p_idx][copp_idx], 0);
+	atomic_set(&this_adm.copp.stat[p_idx][copp_idx], -1);
 	atomic_set(&this_adm.copp.cmd_err_code[p_idx][copp_idx], 0);
 	ret = apr_send_pkt(this_adm.apr, (uint32_t *)&admp);
 	if (ret < 0) {
@@ -331,20 +331,21 @@ int adm_dts_eagle_set(int port_id, int copp_idx, int param_id,
 		goto fail_cmd;
 	}
 	ret = wait_event_timeout(this_adm.copp.wait[p_idx][copp_idx],
-			atomic_read(&this_adm.copp.stat[p_idx][copp_idx]),
+			atomic_read(&this_adm.copp.stat
+			[p_idx][copp_idx]) >= 0,
 			msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
 		pr_err("DTS_EAGLE_ADM: %s - set params timed out port = %d\n",
 			__func__, port_id);
 		ret = -EINVAL;
-	} else if (atomic_read(&this_adm.copp.cmd_err_code
+	} else if (atomic_read(&this_adm.copp.stat
 				[p_idx][copp_idx]) > 0) {
 		pr_err("%s: DSP returned error[%s]\n",
 				__func__, adsp_err_get_err_str(
-				atomic_read(&this_adm.copp.cmd_err_code
+				atomic_read(&this_adm.copp.stat
 				[p_idx][copp_idx])));
 		ret = adsp_err_get_lnx_err_code(
-				atomic_read(&this_adm.copp.cmd_err_code
+				atomic_read(&this_adm.copp.stat
 				[p_idx][copp_idx]));
 	} else {
 		ret = 0;
@@ -430,7 +431,7 @@ int adm_dts_eagle_get(int port_id, int copp_idx, int param_id,
 	admp.param_max_size = size + sizeof(struct adm_param_data_v5);
 	admp.reserved = 0;
 
-	atomic_set(&this_adm.copp.stat[p_idx][copp_idx], 0);
+	atomic_set(&this_adm.copp.stat[p_idx][copp_idx], -1);
 	atomic_set(&this_adm.copp.cmd_err_code[p_idx][copp_idx], 0);
 
 	ret = apr_send_pkt(this_adm.apr, (uint32_t *)&admp);
@@ -441,21 +442,22 @@ int adm_dts_eagle_get(int port_id, int copp_idx, int param_id,
 		goto fail_cmd;
 	}
 	ret = wait_event_timeout(this_adm.copp.wait[p_idx][copp_idx],
-			atomic_read(&this_adm.copp.stat[p_idx][copp_idx]),
+			atomic_read(&this_adm.copp.stat
+			[p_idx][copp_idx]) >= 0,
 			msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
 		pr_err("DTS_EAGLE_ADM: %s - EAGLE get params timed out port = %d\n",
 			__func__, port_id);
 		ret = -EINVAL;
 		goto fail_cmd;
-	} else if (atomic_read(&this_adm.copp.cmd_err_code
+	} else if (atomic_read(&this_adm.copp.stat
 				[p_idx][copp_idx]) > 0) {
 		pr_err("%s: DSP returned error[%s]\n",
 				__func__, adsp_err_get_err_str(
-				atomic_read(&this_adm.copp.cmd_err_code
+				atomic_read(&this_adm.copp.stat
 				[p_idx][copp_idx])));
 		ret = adsp_err_get_lnx_err_code(
-				atomic_read(&this_adm.copp.cmd_err_code
+				atomic_read(&this_adm.copp.stat
 					[p_idx][copp_idx]));
 		goto fail_cmd;
 	}
